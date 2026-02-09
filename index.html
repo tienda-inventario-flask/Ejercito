@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Militar - Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #f4f4f9; display: block; padding: 20px; }
+        .form-container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #45a049; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .label { font-weight: bold; margin-top: 10px; display: block; font-size: 0.9em; }
+        #qr-result { text-align: center; margin-top: 20px; padding: 20px; background: #e8f5e9; border-radius: 8px; display: none; }
+        #qrcode { display: flex; justify-content: center; margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h2>Ingresar Nuevo Perfil</h2>
+        
+        <span class="label">Foto de Perfil:</span>
+        <input type="file" id="fotoPerfil" accept="image/*">
+
+        <input type="text" id="numeroMilitar" placeholder="Número Militar (Ej: 0000000144)">
+        <input type="text" id="organizacion" value="EJERCITO DE REPÚBLICA DOMINICANA">
+        <input type="text" id="rango" placeholder="Rango (Ej: TENIENTE CORONEL)">
+        <input type="text" id="nombre" placeholder="Nombre Completo">
+        <input type="text" id="cedula" placeholder="Cédula (Ej: 016-0016919-5)">
+        <input type="text" id="tiempoServicio" placeholder="Tiempo Servicio (Ej: 29 AÑOS...)">
+        <input type="text" id="tiempoRango" placeholder="Tiempo Rango (Ej: 5 AÑOS...)">
+        
+        <span class="label">Estado:</span>
+        <select id="estado">
+            <option value="ACTIVO">ACTIVO</option>
+            <option value="RETIRO">RETIRO</option>
+        </select>
+
+        <span class="label">Insignia de Rango:</span>
+        <input type="file" id="fotoInsignia" accept="image/*">
+
+        <button id="btnGuardar">Guardar y Generar QR</button>
+
+        <div id="qr-result">
+            <h3>¡Perfil Creado Exitosamente!</h3>
+            <div id="qrcode"></div>
+            <p><a id="link-credencial" href="#" target="_blank">Ver Credencial Generada</a></p>
+        </div>
+    </div>
+
+    <script>
+        // --- TUS CLAVES DE SUPABASE ---
+        const SUPABASE_URL = 'https://wmnbgctvvrlobaxcqogp.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtbmJnY3R2dnJsb2JheGNxb2dwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1ODE2NzAsImV4cCI6MjA4NjE1NzY3MH0.EM-mZOoW1cNNcKIk4Opfr5uLrXxJ_0xYOo2gUuizAiY';
+        
+        // CORRECCIÓN: Usamos 'supabaseClient' para evitar conflicto de nombres
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const btnGuardar = document.getElementById('btnGuardar');
+
+        // Escuchamos el clic
+        btnGuardar.addEventListener('click', guardarPerfil);
+
+        async function guardarPerfil() {
+            console.log("Iniciando proceso...");
+            btnGuardar.textContent = "Subiendo datos...";
+            btnGuardar.disabled = true;
+
+            try {
+                // 1. Validar fotos
+                const fotoPerfilInput = document.getElementById('fotoPerfil');
+                const fotoInsigniaInput = document.getElementById('fotoInsignia');
+
+                if (!fotoPerfilInput.files[0] || !fotoInsigniaInput.files[0]) {
+                    throw new Error("Falta seleccionar alguna de las fotos.");
+                }
+
+                // 2. Subir Fotos
+                const urlPerfil = await subirFoto(fotoPerfilInput.files[0]);
+                const urlInsignia = await subirFoto(fotoInsigniaInput.files[0]);
+
+                console.log("Fotos subidas ok.");
+
+                // 3. Guardar en Base de Datos
+                // Fíjate que ahora usamos 'supabaseClient' en lugar de 'supabase'
+                const { data, error } = await supabaseClient
+                    .from('personal')
+                    .insert([{
+                        numero_militar: document.getElementById('numeroMilitar').value,
+                        organizacion: document.getElementById('organizacion').value,
+                        rango: document.getElementById('rango').value,
+                        nombre_completo: document.getElementById('nombre').value,
+                        cedula: document.getElementById('cedula').value,
+                        tiempo_servicio: document.getElementById('tiempoServicio').value,
+                        tiempo_rango: document.getElementById('tiempoRango').value,
+                        estado: document.getElementById('estado').value,
+                        foto_perfil_url: urlPerfil,
+                        foto_insignia_url: urlInsignia
+                    }])
+                    .select();
+
+                if (error) throw error;
+
+                // 4. Generar QR
+                const idGenerado = data[0].id;
+                const urlCredencial = `${window.location.origin}/tarjeta.html?id=${idGenerado}`;
+
+                document.getElementById('qr-result').style.display = 'block';
+                document.getElementById('qrcode').innerHTML = ""; 
+                new QRCode(document.getElementById("qrcode"), {
+                    text: urlCredencial,
+                    width: 128,
+                    height: 128
+                });
+
+                const link = document.getElementById('link-credencial');
+                link.href = urlCredencial;
+                link.textContent = "Abrir Credencial";
+
+                btnGuardar.textContent = "Guardado Correctamente";
+                alert("¡Perfil guardado!");
+
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + err.message);
+                btnGuardar.textContent = "Reintentar";
+                btnGuardar.disabled = false;
+            }
+        }
+
+        async function subirFoto(archivo) {
+            const nombreArchivo = Date.now() + '_' + archivo.name.replace(/\s/g, '');
+            
+            // Usamos supabaseClient aquí también
+            const { data, error } = await supabaseClient.storage
+                .from('fotos')
+                .upload(nombreArchivo, archivo);
+
+            if (error) throw error;
+
+            const { data: urlData } = supabaseClient.storage
+                .from('fotos')
+                .getPublicUrl(nombreArchivo);
+                
+            return urlData.publicUrl;
+        }
+    </script>
+</body>
+</html>

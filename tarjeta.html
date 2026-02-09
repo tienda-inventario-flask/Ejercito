@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credencial Oficial</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="visor">
+
+    <div class="credencial-card" id="card" style="display:none;">
+        
+        <div class="encabezado-oficial">
+            <img src="https://wmnbgctvvrlobaxcqogp.supabase.co/storage/v1/object/public/fotos/MINISTERIO_DE_DEFENSA.png" class="logo-ministerio" alt="Escudo MIDE">
+            
+            <div class="texto-encabezado">
+                <div class="pais">REPUBLICA DOMINICANA</div>
+                <div class="ministerio">MINISTERIO DE DEFENSA</div>
+                <div class="lema">"TODO POR LA PATRIA"</div>
+            </div>
+        </div>
+        <div class="profile-image-container">
+            <img id="imgPerfil" src="" alt="Foto" class="profile-image">
+        </div>
+
+        <div class="militar-id" id="txtNumero">...</div>
+
+        <div class="org-banner" id="txtOrg">...</div>
+
+        <div class="datos-principales">
+            <div class="rango" id="txtRango">...</div>
+            <div class="nombre" id="txtNombre">...</div>
+            <div class="cedula">CED. <span id="txtCedula">...</span></div>
+        </div>
+
+        <div class="datos-tiempo">
+            <p>Tiempo en Servicio: <span id="txtServicio">...</span></p>
+            <p>Tiempo en Rango: <span id="txtTiempoRango">...</span></p>
+        </div>
+
+        <div>
+            <span class="estado-badge" id="txtEstado">...</span>
+        </div>
+
+        <div class="insignia-container">
+            <img id="imgInsignia" src="" alt="Insignia">
+            <div class="gold-bar"></div>
+        </div>
+    </div>
+    
+    <div id="loading">Cargando sistema...</div>
+
+    <script>
+        // TUS CLAVES (No tocar)
+        const SUPABASE_URL = 'https://wmnbgctvvrlobaxcqogp.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtbmJnY3R2dnJsb2JheGNxb2dwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1ODE2NzAsImV4cCI6MjA4NjE1NzY3MH0.EM-mZOoW1cNNcKIk4Opfr5uLrXxJ_0xYOo2gUuizAiY';
+
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function cargarDatos() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const id = params.get('id');
+
+                if (!id) {
+                    document.getElementById('loading').textContent = "Error: ID no detectado.";
+                    return;
+                }
+
+                const { data, error } = await client
+                    .from('personal')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error || !data) {
+                    document.getElementById('loading').textContent = "Perfil no encontrado.";
+                    return;
+                }
+
+                // Llenar datos
+                document.getElementById('imgPerfil').src = data.foto_perfil_url;
+                document.getElementById('txtNumero').textContent = data.numero_militar;
+                document.getElementById('txtOrg').textContent = data.organizacion;
+                document.getElementById('txtRango').textContent = data.rango;
+                document.getElementById('txtNombre').textContent = data.nombre_completo;
+                document.getElementById('txtCedula').textContent = data.cedula;
+                document.getElementById('txtServicio').textContent = data.tiempo_servicio;
+                document.getElementById('txtTiempoRango').textContent = data.tiempo_rango;
+                document.getElementById('txtEstado').textContent = data.estado;
+                document.getElementById('imgInsignia').src = data.foto_insignia_url;
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('card').style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').textContent = "Error de conexión.";
+            }
+        }
+        cargarDatos();
+    </script>
+</body>
+</html>
