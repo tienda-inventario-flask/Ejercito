@@ -1,0 +1,23 @@
+name: Ping Supabase Anti-Pausa
+
+on:
+  schedule:
+    # Se ejecuta cada 3 días
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # Este comando nos permite poner un botón para probarlo manualmente
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mantener despierto el Proyecto 1 (jqmgwax...)
+        run: |
+          curl -X GET "https://jqmgwaxqdxdozfuvouzz.supabase.co/rest/v1/nombre?select=*&limit=1" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY_1 }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY_1 }}"
+
+      - name: Mantener despierto el Proyecto 2 (wmnbgct...)
+        run: |
+          curl -X GET "https://wmnbgctvvrlobaxcqogp.supabase.co/rest/v1/rango?select=*&limit=1" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY_2 }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY_2 }}"
